@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        table *{
+            margin-left: 5px;
+            text-align: left;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>{{.cd}}</h1>
+    <!-- <form action="/upload" method="POST">
+        <input type="file" name="file" id="file">
+        <button type="submit">提交</button>
+    </form> -->
+    
+    <table >
+        <tr>
+            <th><h3>文件名</h3></th>
+            <th><h3>类型</h3></th>
+            <th><h3>大小</h3></th>
+            <th><h3>下载</h3></th>
+        </tr>
+        <tr>
+            <td><a href="?p={{.cd}}">返回</a></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+        {{range .list}}
+
+        <tr>
+            
+    
+            {{if eq .Ftype "file"}}
+                <td><span>{{.Name }}</span></td>
+                <td><span>{{.Ftype}}</span></td>
+                <td><span>{{.Size}}</span></td>
+                <td><a href="{{.Link}}">下载</a></td>
+            
+            {{else}}
+                <td><a href="?p={{.Link}}">{{.Name }}</a></td>
+                <td></td>
+                <td></td>
+                <td></td>
+            {{end}}
+        </tr>
+    
+        {{end}}
+    </table>
+</body>
+
+</html>
