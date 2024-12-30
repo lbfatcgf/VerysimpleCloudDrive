@@ -1,8 +1,9 @@
 package main
 
 import (
+	"flag"
 	"fmt"
-	"io/ioutil"
+
 	"net"
 	"net/http"
 	"os"
@@ -14,16 +15,24 @@ import (
 func init() {
 	openOrCreateDir("vscd")
 }
-func main() {
-	listener, err := net.Listen("tcp", ":0")
-	if err != nil {
-		panic(err)
-	}
-	port := fmt.Sprintf(":%v", listener.Addr().(*net.TCPAddr).Port)
 
-	listener.Close()
+var server_port string
+
+func main() {
+	flag.StringVar(&server_port, "port", "", "server port")
+	flag.Parse()
+	if server_port == "" {
+		listener, err := net.Listen("tcp", ":0")
+		if err != nil {
+			panic(err)
+		}
+		listener.Close()
+		server_port = fmt.Sprintf("%v", listener.Addr().(*net.TCPAddr).Port)
+	}
+
+	
 	app := gin.Default()
-	app.MaxMultipartMemory = 4 *1024*1024*1024
+	app.MaxMultipartMemory = 4 * 1024 * 1024 * 1024
 	app.Static("/mirrors", "./vscd")
 	app.LoadHTMLGlob("view/*")
 	app.GET("/", func(c *gin.Context) {
@@ -46,7 +55,7 @@ func main() {
 
 		for _, v := range list {
 			fl = append(fl,
-				newvscdfile(v.Name(), filetype(v.IsDir()), p, v.Size()),
+				newvscdfile(v, p),
 			)
 		}
 		fmt.Println(fl)
@@ -60,7 +69,7 @@ func main() {
 	// 	c.SaveUploadedFile(file, "./vscd/"+file.Filename)
 	// 	c.Status(http.StatusOK)
 	// })
-	app.Run(port)
+	app.Run(":"+server_port)
 
 }
 
@@ -71,17 +80,22 @@ type vscdfile struct {
 	Link  string
 }
 
-func newvscdfile(n, t, l string, s int64) vscdfile {
-	f := vscdfile{
-		Name:  n,
-		Ftype: t,
-		Size:  s,
+func newvscdfile(tfile os.DirEntry, l string) vscdfile {
+	
+	finfo, err := tfile.Info()
+	if err != nil {
+		return vscdfile{}
 	}
-	if t == "file" {
+	f := vscdfile{
+		Name:  tfile.Name(),
+		Ftype: filetype(tfile.IsDir()),
+		Size:  finfo.Size(),
+	}
+	if f.Ftype == "file" {
 		f.Link = strings.Replace(l, "vscd", "mirrors", 1)
-		f.Link = strings.ReplaceAll(f.Link, "-", "/") + "/" + n
+		f.Link = strings.ReplaceAll(f.Link, "-", "/") + "/" + f.Name
 	} else {
-		f.Link = strings.ReplaceAll(l, "/", "-") + "-" + n
+		f.Link = strings.ReplaceAll(l, "/", "-") + "-" + f.Name
 	}
 
 	return f
@@ -95,9 +109,9 @@ func filetype(isdir bool) string {
 
 }
 
-func flist(str string) []os.FileInfo {
+func flist(str string) []os.DirEntry {
 
-	dir_list, e := ioutil.ReadDir(str)
+	dir_list, e := os.ReadDir(str)
 	if e != nil {
 		fmt.Println("read dir error")
 		return nil
